@@ -1,6 +1,6 @@
 # SINAIS - Sistem Informasi Nilai Akademis Mahasiswa
 
-SINAIS ini program CLI buatan Python buat ngelola data dan nilai mahasiswa. Dibuat untuk Tugas Project Akhir Praktikum Dasar Pemrograman, dan perhitungan nilainya mengikuti Kontrak Perkuliahan Elektronika TA 2025-2026.
+SINAIS ini program CLI buatan Python buat ngelola data dan nilai mahasiswa. Dibuat untuk Tugas Project Akhir Praktikum Dasar Pemrograman, dan perhitungan nilainya mengikuti Kontrak Perkuliahan Dasar Pemograman 2026-2027
 
 ## Fitur
 
