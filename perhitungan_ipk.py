@@ -10,9 +10,9 @@ def hitung_rata_rata_ipk(data_mahasiswa):
     """Menghitung rata-rata IPK seluruh data mahasiswa"""
     if not data_mahasiswa:
         return 0.0
-    
+
     total_ip = 0
     for m in data_mahasiswa:
         total_ip += m['ipk']
-        
+
     return total_ip / len(data_mahasiswa)

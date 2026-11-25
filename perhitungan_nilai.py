@@ -1,11 +1,14 @@
-import os
+# Konfigurasi disimpan di folder yang sama dengan program
+FILE_BOBOT = "bobot_penilaian.txt"
 
-# Menyimpan konfigurasi ke dalam folder data
-FILE_BOBOT = "data/bobot_penilaian.txt"
+BOBOT_DEFAULT = {
+    "partisipasi": 0.05, "proyek": 0.45, "tugas": 0.05,
+    "quis": 0.05, "uts": 0.20, "uas": 0.20
+}
 
 def muat_bobot():
     """Memuat bobot dari file. Jika tidak ada, gunakan bobot default."""
-    if os.path.exists(FILE_BOBOT):
+    try:
         with open(FILE_BOBOT, "r") as file:
             data = file.read().strip().split("|")
             if len(data) == 6:
@@ -17,25 +20,20 @@ def muat_bobot():
                     "uts": float(data[4]),
                     "uas": float(data[5])
                 }
-    
-    # Nilai default jika file belum pernah diatur
-    return {
-        "partisipasi": 0.05, "proyek": 0.45, "tugas": 0.05,
-        "quis": 0.05, "uts": 0.20, "uas": 0.20
-    }
+    except (FileNotFoundError, ValueError):
+        pass
+    return dict(BOBOT_DEFAULT)
 
 def simpan_bobot(bobot):
     """Menyimpan pengaturan bobot baru ke dalam file txt."""
-    if not os.path.exists("data"):
-        os.makedirs("data")
-        
     with open(FILE_BOBOT, "w") as file:
         teks = f"{bobot['partisipasi']}|{bobot['proyek']}|{bobot['tugas']}|{bobot['quis']}|{bobot['uts']}|{bobot['uas']}"
         file.write(teks)
 
-def hitung_nilai_akhir(partisipasi, proyek, tugas, quis, uts, uas):
-    """Menghitung persentase nilai akhir secara dinamis sesuai bobot saat ini"""
-    bobot = muat_bobot()
+def hitung_nilai_akhir(partisipasi, proyek, tugas, quis, uts, uas, bobot=None):
+    """Menghitung nilai akhir sesuai bobot. Jika bobot tidak diberikan, dibaca dari file."""
+    if bobot is None:
+        bobot = muat_bobot()
     akhir = (partisipasi * bobot['partisipasi']) + \
             (proyek * bobot['proyek']) + \
             (tugas * bobot['tugas']) + \
