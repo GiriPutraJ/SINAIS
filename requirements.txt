@@ -1,12 +1,3 @@
-# ==========================================
-# REQUIREMENTS PROJECT SINAIS
-# ==========================================
-# Aplikasi ini bersifat Zero-Dependency (Sangat Ringan).
-# Tidak memerlukan instalasi library pihak ketiga via pip.
-# Menggunakan library bawaan standar Python (Standard Library).
-
-# Spesifikasi Sistem Minimum:
-python >= 3.6
-
-# Built-in modules yang digunakan (tidak perlu diinstal):
-# - os (untuk validasi file/path checking)
+# SINAIS tidak butuh library tambahan, jadi tidak ada yang perlu diinstal lewat pip.
+# Cukup Python 3.6 ke atas.
+# Modul yang dipakai semuanya bawaan Python (os, untuk ngecek file data).
