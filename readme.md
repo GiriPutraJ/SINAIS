@@ -65,9 +65,9 @@ README.md                dokumentasi ini
 
 | Nama | Persentase pengerjaan |
 |---|---|
-| Giri | 40% |
-| Ghazi | 30% |
-| Rivaldo | 30% |
+| Giri Putra Jatimuria| 40% |
+| M. Ghazi Al Ghifari Ananta | 30% |
+| Rivaldo Fawas Savandi | 30% |
 
 ## Cara menjalankan
 
