@@ -1,38 +1,71 @@
-import os
 import perhitungan_nilai as pn
 import perhitungan_ipk as pi
 
-NAMA_FILE = "data/data_mahasiswa.txt"
+NAMA_FILE = "data_mahasiswa.txt"
+LEBAR = 75
+PANJANG_NIM = 11
 
-def pastikan_folder_ada():
-    """Memastikan folder 'data' otomatis dibuat jika belum ada"""
-    if not os.path.exists("data"):
-        os.makedirs("data")
+def judul(teks):
+    print("\n" + "=" * LEBAR)
+    print(teks.center(LEBAR))
+    print("=" * LEBAR)
+
+def cetak_tabel(data):
+    print(f"{'NIM':<14}{'Nama':<20}{'Hadir':<8}{'Proyek':<8}{'Akhir':<8}{'Grade':<7}{'Status'}")
+    print("-" * LEBAR)
+    for m in data:
+        print(f"{m['nim']:<14}{m['nama']:<20}{m['hadir']:<8}{m['proyek']:<8.2f}{m['akhir']:<8.2f}{m['grade']:<7}{m['status']}")
+    print("-" * LEBAR)
 
 def muat_data():
-    pastikan_folder_ada()
     data = []
-    if os.path.exists(NAMA_FILE):
+    try:
         with open(NAMA_FILE, "r") as file:
             for baris in file:
                 item = baris.strip().split("|")
                 if len(item) == 13:
                     data.append({
-                        "nim": item[0], "nama": item[1], "hadir": int(item[2]), 
+                        "nim": item[0], "nama": item[1], "hadir": int(item[2]),
                         "partisipasi": float(item[3]), "proyek": float(item[4]),
                         "tugas": float(item[5]), "quis": float(item[6]),
                         "uts": float(item[7]), "uas": float(item[8]),
-                        "akhir": float(item[9]), "grade": item[10], 
+                        "akhir": float(item[9]), "grade": item[10],
                         "status": item[11], "ipk": float(item[12])
                     })
+    except FileNotFoundError:
+        pass
     return data
 
 def simpan_data(data):
-    pastikan_folder_ada()
     with open(NAMA_FILE, "w") as file:
         for m in data:
             teks = f"{m['nim']}|{m['nama']}|{m['hadir']}|{m['partisipasi']}|{m['proyek']}|{m['tugas']}|{m['quis']}|{m['uts']}|{m['uas']}|{m['akhir']}|{m['grade']}|{m['status']}|{m['ipk']}\n"
             file.write(teks)
+
+def nim_valid(nim):
+    return len(nim) == PANJANG_NIM and nim[0].isalpha() and nim[1:].isdigit()
+
+def input_nim(label="  NIM   : "):
+    while True:
+        nim = input(label).strip().upper()
+        if nim_valid(nim):
+            return nim
+        print("  ! Format NIM salah. Contoh yang benar: J0404261234 (1 huruf + 10 angka).")
+
+def nama_valid(nama):
+    if nama == "":
+        print("  ! Nama tidak boleh kosong.")
+        return False
+    if "|" in nama or "," in nama:
+        print("  ! Nama tidak boleh mengandung karakter '|' atau ','.")
+        return False
+    return True
+
+def input_nama(label="  Nama  : "):
+    while True:
+        nama = " ".join(input(label).split())
+        if nama_valid(nama):
+            return nama.title()
 
 def input_nilai_valid(label):
     while True:
@@ -54,130 +87,72 @@ def input_kehadiran():
         except ValueError:
             print("  ! Input harus berupa angka bulat.")
 
-def tambah_data(data):
-    print("\n--- TAMBAH DATA MAHASISWA ---")
-    nim = input("  NIM   : ")
-    
+def urutkan_berdasarkan_nim(data):
+    hasil = data[:]
+    for i in range(1, len(hasil)):
+        kunci = hasil[i]
+        j = i - 1
+        while j >= 0 and hasil[j]['nim'] > kunci['nim']:
+            hasil[j + 1] = hasil[j]
+            j -= 1
+        hasil[j + 1] = kunci
+    return hasil
+
+def binary_search_nim(data_terurut, nim):
+    kiri, kanan = 0, len(data_terurut) - 1
+    while kiri <= kanan:
+        tengah = (kiri + kanan) // 2
+        if data_terurut[tengah]['nim'] == nim:
+            return data_terurut[tengah]
+        elif data_terurut[tengah]['nim'] < nim:
+            kiri = tengah + 1
+        else:
+            kanan = tengah - 1
+    return None
+
+def linear_search_nama(data, kata):
+    kata = kata.lower()
+    hasil = []
     for m in data:
-        if m['nim'] == nim:
-            print("  ! Gagal: Mahasiswa dengan NIM tersebut sudah ada.")
-            return
-
-    nama = input("  Nama  : ")
-    hadir = input_kehadiran()
-    
-    bobot = pn.muat_bobot()
-    
-    partisipasi = input_nilai_valid(f"Nilai Partisipasi ({int(bobot['partisipasi']*100)}%)")
-    proyek = input_nilai_valid(f"Nilai Proyek ({int(bobot['proyek']*100)}%)")
-    tugas = input_nilai_valid(f"Nilai Tugas ({int(bobot['tugas']*100)}%)")
-    quis = input_nilai_valid(f"Nilai Quis ({int(bobot['quis']*100)}%)")
-    uts = input_nilai_valid(f"Nilai UTS ({int(bobot['uts']*100)}%)")
-    
-    if hadir < 11:
-        print(f"  ! Peringatan: Kehadiran hanya {hadir}/14 (Bolos lebih dari 3x).")
-        print("  ! Mahasiswa TIDAK diizinkan mengikuti UAS. Nilai UAS otomatis 0.")
-        uas = 0.0
-    else:
-        uas = input_nilai_valid(f"Nilai UAS ({int(bobot['uas']*100)}%)")
-
-    akhir = pn.hitung_nilai_akhir(partisipasi, proyek, tugas, quis, uts, uas)
-    grade = pn.tentukan_grade(akhir)
-    status = pn.tentukan_status(grade)
-    ipk = pi.konversi_grade_ke_ip(grade)
-
-    data.append({
-        "nim": nim, "nama": nama, "hadir": hadir,
-        "partisipasi": partisipasi, "proyek": proyek, "tugas": tugas, "quis": quis,
-        "uts": uts, "uas": uas,
-        "akhir": akhir, "grade": grade, "status": status, "ipk": ipk
-    })
-    simpan_data(data)
-    print("  ✓ Data berhasil ditambahkan dan disimpan!")
-
-def tampilkan_data(data):
-    print("\n--- DATA MAHASISWA ---")
-    if not data:
-        print("Belum ada data.")
-        return
-        
-    print(f"{'NIM':<10}{'Nama':<15}{'Hadir':<8}{'Proyek':<8}{'Akhir':<8}{'Grade':<8}{'Status'}")
-    print("-" * 65)
-    for m in data:
-        print(f"{m['nim']:<10}{m['nama']:<15}{m['hadir']:<8}{m['proyek']:<8.2f}{m['akhir']:<8.2f}{m['grade']:<8}{m['status']}")
-    
-    rata_ipk = pi.hitung_rata_rata_ipk(data)
-    print("-" * 65)
-    print(f"Rata-rata IPK Kelas: {rata_ipk:.2f}")
-
-def edit_data(data):
-    print("\n--- EDIT DATA MAHASISWA ---")
-    nim = input("Masukkan NIM yang ingin diedit: ")
-    
-    for m in data:
-        if m['nim'] == nim:
-            print(f"Data ditemukan: {m['nama']}")
-            m['nama'] = input(f"  Nama baru ({m['nama']}): ") or m['nama']
-            
-            m['hadir'] = input_kehadiran()
-            bobot = pn.muat_bobot()
-            
-            m['partisipasi'] = input_nilai_valid(f"Nilai Partisipasi baru ({int(bobot['partisipasi']*100)}%)")
-            m['proyek'] = input_nilai_valid(f"Nilai Proyek baru ({int(bobot['proyek']*100)}%)")
-            m['tugas'] = input_nilai_valid(f"Nilai Tugas baru ({int(bobot['tugas']*100)}%)")
-            m['quis'] = input_nilai_valid(f"Nilai Quis baru ({int(bobot['quis']*100)}%)")
-            m['uts'] = input_nilai_valid(f"Nilai UTS baru ({int(bobot['uts']*100)}%)")
-            
-            if m['hadir'] < 11:
-                print(f"  ! Peringatan: Kehadiran hanya {m['hadir']}/14.")
-                print("  ! Mahasiswa TIDAK diizinkan mengikuti UAS. Nilai UAS otomatis 0.")
-                m['uas'] = 0.0
-            else:
-                m['uas'] = input_nilai_valid(f"Nilai UAS baru ({int(bobot['uas']*100)}%)")
-            
-            m['akhir'] = pn.hitung_nilai_akhir(m['partisipasi'], m['proyek'], m['tugas'], m['quis'], m['uts'], m['uas'])
-            m['grade'] = pn.tentukan_grade(m['akhir'])
-            m['status'] = pn.tentukan_status(m['grade'])
-            m['ipk'] = pi.konversi_grade_ke_ip(m['grade'])
-            
-            simpan_data(data)
-            print("  ✓ Data berhasil diperbarui dan disimpan!")
-            return
-            
-    print("  ! Mahasiswa dengan NIM tersebut tidak ditemukan.")
-
-def hapus_data(data):
-    print("\n--- HAPUS DATA MAHASISWA ---")
-    nim = input("Masukkan NIM yang ingin dihapus: ")
-    for i, m in enumerate(data):
-        if m['nim'] == nim:
-            konfirmasi = input(f"Yakin ingin menghapus data {m['nama']}? (y/n): ")
-            if konfirmasi.lower() == 'y':
-                del data[i]
-                simpan_data(data)
-                print("  ✓ Data berhasil dihapus dan disimpan!")
-            return
-    print("  ! Mahasiswa dengan NIM tersebut tidak ditemukan.")
+        if kata in m['nama'].lower():
+            hasil.append(m)
+    return hasil
 
 def cari_data(data):
-    print("\n--- CARI DATA MAHASISWA ---")
+    judul("CARI DATA MAHASISWA")
     if not data:
         print("Belum ada data.")
         return
-    nim_cari = input("Masukkan NIM yang dicari: ")
-    ditemukan = False
-    for m in data:
-        if m['nim'] == nim_cari:
+    print("1. Cari berdasarkan NIM (Binary Search)")
+    print("2. Cari berdasarkan Nama (Linear Search, sebagian nama)")
+    pilihan = input("Pilih metode (1/2): ").strip()
+
+    if pilihan == "1":
+        nim_cari = input("Masukkan NIM yang dicari: ").strip().upper()
+        terurut = urutkan_berdasarkan_nim(data)
+        m = binary_search_nim(terurut, nim_cari)
+        if m:
             print("\n  ✓ Data Ditemukan!")
             print(f"    NIM         : {m['nim']}\n    Nama        : {m['nama']}\n    Kehadiran   : {m['hadir']}/14")
             print(f"    Nilai Akhir : {m['akhir']:.2f}\n    Grade       : {m['grade']} ({m['status']})\n    IPK         : {m['ipk']:.2f}")
-            ditemukan = True
-            break
-    if not ditemukan:
-        print("  ! Data mahasiswa tidak ditemukan.")
+        else:
+            print("  ! Data mahasiswa tidak ditemukan.")
+    elif pilihan == "2":
+        kata = input("Masukkan nama / sebagian nama: ").strip()
+        if kata == "":
+            print("  ! Kata pencarian tidak boleh kosong.")
+            return
+        hasil = linear_search_nama(data, kata)
+        if hasil:
+            print(f"\n  ✓ Ditemukan {len(hasil)} data:\n")
+            cetak_tabel(hasil)
+        else:
+            print("  ! Tidak ada nama yang cocok.")
+    else:
+        print("  ! Pilihan tidak valid.")
 
 def urutkan_data(data):
-    print("\n--- URUTKAN DATA MAHASISWA (SORTING) ---")
+    judul("URUTKAN DATA MAHASISWA")
     if not data:
         print("Belum ada data.")
         return
@@ -202,8 +177,114 @@ def urutkan_data(data):
     simpan_data(data)
     tampilkan_data(data)
 
+def hitung_ulang(m, bobot=None):
+    m['akhir'] = pn.hitung_nilai_akhir(m['partisipasi'], m['proyek'], m['tugas'], m['quis'], m['uts'], m['uas'], bobot)
+    m['grade'] = pn.tentukan_grade(m['akhir'])
+    m['status'] = pn.tentukan_status(m['grade'])
+    m['ipk'] = pi.konversi_grade_ke_ip(m['grade'])
+
+def tambah_data(data):
+    judul("TAMBAH DATA MAHASISWA")
+    nim = input_nim()
+
+    for m in data:
+        if m['nim'] == nim:
+            print("  ! Gagal: Mahasiswa dengan NIM tersebut sudah ada.")
+            return
+
+    nama = input_nama()
+    hadir = input_kehadiran()
+
+    bobot = pn.muat_bobot()
+
+    partisipasi = input_nilai_valid(f"Nilai Partisipasi ({int(bobot['partisipasi']*100)}%)")
+    proyek = input_nilai_valid(f"Nilai Proyek ({int(bobot['proyek']*100)}%)")
+    tugas = input_nilai_valid(f"Nilai Tugas ({int(bobot['tugas']*100)}%)")
+    quis = input_nilai_valid(f"Nilai Quis ({int(bobot['quis']*100)}%)")
+    uts = input_nilai_valid(f"Nilai UTS ({int(bobot['uts']*100)}%)")
+
+    if hadir < 11:
+        print(f"  ! Peringatan: Kehadiran hanya {hadir}/14 (Bolos lebih dari 3x).")
+        print("  ! Mahasiswa TIDAK diizinkan mengikuti UAS. Nilai UAS otomatis 0.")
+        uas = 0.0
+    else:
+        uas = input_nilai_valid(f"Nilai UAS ({int(bobot['uas']*100)}%)")
+
+    m = {
+        "nim": nim, "nama": nama, "hadir": hadir,
+        "partisipasi": partisipasi, "proyek": proyek, "tugas": tugas, "quis": quis,
+        "uts": uts, "uas": uas
+    }
+    hitung_ulang(m, bobot)
+    data.append(m)
+    simpan_data(data)
+    print("  ✓ Data berhasil ditambahkan dan disimpan!")
+
+def tampilkan_data(data):
+    judul("DATA MAHASISWA")
+    if not data:
+        print("Belum ada data.")
+        return
+
+    cetak_tabel(data)
+    rata_ipk = pi.hitung_rata_rata_ipk(data)
+    print(f"Total: {len(data)} mahasiswa  |  Rata-rata IPK Kelas: {rata_ipk:.2f}")
+
+def edit_data(data):
+    judul("EDIT DATA MAHASISWA")
+    nim = input("Masukkan NIM yang ingin diedit: ").strip().upper()
+
+    for m in data:
+        if m['nim'] == nim:
+            print(f"Data ditemukan: {m['nama']}")
+            while True:
+                nama_baru = " ".join(input(f"  Nama baru ({m['nama']}), Enter = tetap: ").split())
+                if nama_baru == "":
+                    break
+                if nama_valid(nama_baru):
+                    m['nama'] = nama_baru.title()
+                    break
+
+            m['hadir'] = input_kehadiran()
+            bobot = pn.muat_bobot()
+
+            m['partisipasi'] = input_nilai_valid(f"Nilai Partisipasi baru ({int(bobot['partisipasi']*100)}%)")
+            m['proyek'] = input_nilai_valid(f"Nilai Proyek baru ({int(bobot['proyek']*100)}%)")
+            m['tugas'] = input_nilai_valid(f"Nilai Tugas baru ({int(bobot['tugas']*100)}%)")
+            m['quis'] = input_nilai_valid(f"Nilai Quis baru ({int(bobot['quis']*100)}%)")
+            m['uts'] = input_nilai_valid(f"Nilai UTS baru ({int(bobot['uts']*100)}%)")
+
+            if m['hadir'] < 11:
+                print(f"  ! Peringatan: Kehadiran hanya {m['hadir']}/14.")
+                print("  ! Mahasiswa TIDAK diizinkan mengikuti UAS. Nilai UAS otomatis 0.")
+                m['uas'] = 0.0
+            else:
+                m['uas'] = input_nilai_valid(f"Nilai UAS baru ({int(bobot['uas']*100)}%)")
+
+            hitung_ulang(m, bobot)
+            simpan_data(data)
+            print("  ✓ Data berhasil diperbarui dan disimpan!")
+            return
+
+    print("  ! Mahasiswa dengan NIM tersebut tidak ditemukan.")
+
+def hapus_data(data):
+    judul("HAPUS DATA MAHASISWA")
+    nim = input("Masukkan NIM yang ingin dihapus: ").strip().upper()
+    for i, m in enumerate(data):
+        if m['nim'] == nim:
+            konfirmasi = input(f"Yakin ingin menghapus data {m['nama']}? (y/n): ")
+            if konfirmasi.lower() == 'y':
+                del data[i]
+                simpan_data(data)
+                print("  ✓ Data berhasil dihapus dan disimpan!")
+            else:
+                print("  Penghapusan dibatalkan.")
+            return
+    print("  ! Mahasiswa dengan NIM tersebut tidak ditemukan.")
+
 def atur_bobot(data):
-    print("\n--- PENGATURAN BOBOT PENILAIAN ---")
+    judul("PENGATURAN BOBOT PENILAIAN")
     print("Masukkan bobot baru dalam angka persen (contoh: 20 untuk 20%).")
     print("Syarat: Total keseluruhan harus tepat 100%!")
     try:
@@ -213,34 +294,31 @@ def atur_bobot(data):
         quis = float(input("  Bobot Quis (%)        : ")) / 100
         uts = float(input("  Bobot UTS (%)         : ")) / 100
         uas = float(input("  Bobot UAS (%)         : ")) / 100
-        
+
         total = partisipasi + proyek + tugas + quis + uts + uas
-        
+
         if round(total, 2) != 1.00:
             print(f"  ! GAGAL: Total bobot saat ini {total*100:.0f}%. Syarat tidak terpenuhi.")
             return
-            
+
         bobot_baru = {
             "partisipasi": partisipasi, "proyek": proyek, "tugas": tugas,
             "quis": quis, "uts": uts, "uas": uas
         }
         pn.simpan_bobot(bobot_baru)
         print("\n  ✓ Bobot penilaian berhasil diperbarui dan disimpan!")
-        
+
         if data:
             print("  ! Sistem sedang mengkalkulasi ulang seluruh nilai mahasiswa...")
             for m in data:
-                m['akhir'] = pn.hitung_nilai_akhir(m['partisipasi'], m['proyek'], m['tugas'], m['quis'], m['uts'], m['uas'])
-                m['grade'] = pn.tentukan_grade(m['akhir'])
-                m['status'] = pn.tentukan_status(m['grade'])
-                m['ipk'] = pi.konversi_grade_ke_ip(m['grade'])
+                hitung_ulang(m, bobot_baru)
             simpan_data(data)
             print("  ✓ Seluruh database telah disinkronkan dengan bobot yang baru!")
     except ValueError:
         print("  ! Input gagal. Harap masukkan angka yang valid.")
 
 def statistik_kelas(data):
-    print("\n--- DASHBOARD STATISTIK KELAS ---")
+    judul("DASHBOARD STATISTIK KELAS")
     if not data:
         print("Belum ada data mahasiswa.")
         return
@@ -256,7 +334,7 @@ def statistik_kelas(data):
             lulus += 1
         else:
             tidak_lulus += 1
-            
+
         if m['akhir'] > nilai_tertinggi['akhir']:
             nilai_tertinggi = m
         if m['akhir'] < nilai_terendah['akhir']:
@@ -266,49 +344,49 @@ def statistik_kelas(data):
 
     print(f"Total Mahasiswa   : {total_mahasiswa} Orang")
     print(f"Jumlah LULUS      : {lulus} Orang")
-    print(f"Jumlah REMEDIAL   : {tidak_lulus} Orang")
+    print(f"Jumlah TIDAK LULUS: {tidak_lulus} Orang")
     print(f"Rata-rata IPK     : {rata_ipk:.2f}")
-    print("-" * 35)
-    print(f"🏆 Mahasiswa Terbaik : {nilai_tertinggi['nama']} (Nilai: {nilai_tertinggi['akhir']:.2f})")
-    print(f"⚠️ Nilai Terendah   : {nilai_terendah['nama']} (Nilai: {nilai_terendah['akhir']:.2f})")
+    print("-" * 40)
+    print(f"Mahasiswa Terbaik : {nilai_tertinggi['nama']} (Nilai: {nilai_tertinggi['akhir']:.2f})")
+    print(f"Nilai Terendah   : {nilai_terendah['nama']} (Nilai: {nilai_terendah['akhir']:.2f})")
 
 def export_ke_csv(data):
-    print("\n--- EXPORT DATA KE EXCEL (CSV) ---")
+    judul("EXPORT DATA KE EXCEL (CSV)")
     if not data:
         print("Belum ada data untuk diexport.")
         return
-        
-    pastikan_folder_ada()
-    nama_file_csv = "data/laporan_nilai_kelas.csv"
+
+    nama_file_csv = "laporan_nilai_kelas.csv"
 
     try:
         with open(nama_file_csv, "w") as file:
             file.write("NIM,Nama,Kehadiran,Partisipasi,Proyek,Tugas,Quis,UTS,UAS,Nilai Akhir,Grade,Status,IPK\n")
             for m in data:
                 file.write(f"{m['nim']},{m['nama']},{m['hadir']},{m['partisipasi']},{m['proyek']},{m['tugas']},{m['quis']},{m['uts']},{m['uas']},{m['akhir']},{m['grade']},{m['status']},{m['ipk']}\n")
-        print(f"  ✓ SUCCESS: Data berhasil diexport!")
-        print(f"  ✓ Silakan cek file '{nama_file_csv}' di dalam folder data.")
+        print("  ✓ SUCCESS: Data berhasil diexport!")
+        print(f"  ✓ Silakan cek file '{nama_file_csv}' di folder program.")
     except Exception as e:
         print(f"  ! Gagal melakukan export: {e}")
 
 def main():
     data_mahasiswa = muat_data()
-    
+
     while True:
-        print("\n===== SINAIS: MENU UTAMA =====")
-        print("1. Tambah Data Mahasiswa")
-        print("2. Tampilkan Data & IPK")
-        print("3. Edit Data")
-        print("4. Hapus Data")
-        print("5. Cari Data Mahasiswa (Searching)")
-        print("6. Urutkan Data (Sorting)")
-        print("7. Pengaturan Bobot Penilaian (Dinamis)")
-        print("8. Dashboard Statistik Kelas")
-        print("9. Export Data ke Excel (CSV)")
-        print("10. Keluar")
-        
-        pilihan = input("Pilih menu (1-10): ")
-        
+        judul("SINAIS: MENU UTAMA")
+        print("  1. Tambah Data Mahasiswa")
+        print("  2. Tampilkan Data & IPK")
+        print("  3. Edit Data")
+        print("  4. Hapus Data")
+        print("  5. Cari Data Mahasiswa (Searching)")
+        print("  6. Urutkan Data (Sorting)")
+        print("  7. Pengaturan Bobot Penilaian (Dinamis)")
+        print("  8. Dashboard Statistik Kelas")
+        print("  9. Export Data ke Excel (CSV)")
+        print(" 10. Keluar")
+        print("-" * LEBAR)
+
+        pilihan = input("Pilih menu (1-10): ").strip()
+
         if pilihan == "1": tambah_data(data_mahasiswa)
         elif pilihan == "2": tampilkan_data(data_mahasiswa)
         elif pilihan == "3": edit_data(data_mahasiswa)
